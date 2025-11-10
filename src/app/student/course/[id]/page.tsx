@@ -1,330 +1,476 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useParams } from "next/navigation";
+import { use, useEffect, useMemo, useState } from "react";
+import { notFound } from "next/navigation";
 
-import { courses, studentData } from "@/lib/placeholder-data";
-import { useLanguage } from "@/hooks/use-language";
-import { useToast } from "@/hooks/use-toast";
-
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import {
-  Star,
-  Users,
-  PlayCircle,
-  HelpCircle,
-  FileText,
-  Download,
-} from "lucide-react";
+import { courses } from "@/lib/placeholder-data";
 import type { Course } from "@/lib/types";
 
-type LocalEnrollment = {
-  courseId: number;
-  status: "active" | "trial" | "completed";
-  progress: number;
-  enrolledAt: string;
+import { useLanguage } from "@/hooks/use-language";
+
+import {
+  Card,
+  CardHeader,
+  CardTitle,
+  CardContent,
+  CardDescription,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+
+import {
+  BookOpen,
+  FileText,
+  ListChecks,
+  PlayCircle,
+  FilePenLine,
+  Star,
+  MessageCircle,
+} from "lucide-react";
+
+import { AiLearningWidget } from "@/components/ai-learning-widget";
+
+type PageParams = { id: string };
+type PageProps = { params: Promise<PageParams> };
+
+type LessonType = "video" | "pdf" | "quiz" | "assignment";
+
+type LessonAttachment = {
+  name: string;
+  size: number;
+  dataUrl?: string;
 };
 
-export default function CourseDetailPage() {
-  const params = useParams();
-  const idParam =
-    typeof params?.id === "string"
-      ? params.id
-      : Array.isArray(params?.id)
-      ? params.id[0]
-      : "";
+type StudentLesson = {
+  id: number;
+  title: string;
+  type: LessonType;
+  url?: string;
+  isPaid?: boolean;
+  attachment?: LessonAttachment;
+};
 
-  const { t } = useLanguage();
-  const { toast } = useToast();
+type StudentChapter = {
+  id: number;
+  title: string;
+  description?: string;
+  lessons: StudentLesson[];
+};
 
-// نخليها any عشان نوقف صداع TypeScript هنا
-const course = (courses as any[]).find(
-  (c) => String(c.id) === String(idParam)
-);
+type StoredMedia = {
+  name: string;
+  type: string;
+  size: number;
+  dataUrl?: string;
+};
 
+type StoredCourse = Course & {
+  media?: StoredMedia[];
+  department?: string;
+  specialization?: string; // قد يكون بالعربي من AddCoursePage
+  videoUrl?: string;
+};
 
-  // لو الكورس غير موجود
-  if (!course) {
+export default function StudentCoursePage({ params }: PageProps) {
+  const { id } = use(params); // ✅ طريقة Next 15
+  const courseId = Number(id);
+
+  const { t, language } = useLanguage();
+
+  const [course, setCourse] = useState<StoredCourse | null>(null);
+  const [chapters, setChapters] = useState<StudentChapter[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  // 🔹 الدرس الذي يختاره الطالب للتفاعل مع الذكاء التعليمي
+  const [activeLessonTitle, setActiveLessonTitle] = useState<string | undefined>(undefined);
+
+  // 🔹 تحميل بيانات الكورس (من الـ placeholder + teacherCourses)
+  useEffect(() => {
+    setLoading(true);
+
+    // 1) الكورس الأساسي من lib/placeholder-data
+    const baseCourse = courses.find(
+      (c) => c.id === courseId
+    ) as StoredCourse | undefined;
+
+    // 2) الكورسات اللي أضافها المعلّم في localStorage
+    let localCourse: StoredCourse | undefined;
+    if (typeof window !== "undefined") {
+      try {
+        const raw = localStorage.getItem("teacherCourses");
+        if (raw) {
+          const parsed = JSON.parse(raw) as StoredCourse[];
+          if (Array.isArray(parsed)) {
+            localCourse = parsed.find((c) => c.id === courseId);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to read teacherCourses from localStorage", err);
+      }
+    }
+
+    // ✅ نختار النهائي بدون spread على undefined
+    let finalCourse: StoredCourse | null = null;
+    if (baseCourse && localCourse) {
+      finalCourse = { ...baseCourse, ...localCourse };
+    } else if (localCourse) {
+      finalCourse = localCourse;
+    } else if (baseCourse) {
+      finalCourse = baseCourse;
+    } else {
+      finalCourse = null;
+    }
+
+    setCourse(finalCourse);
+
+    if (!finalCourse) {
+      setChapters([]);
+      setLoading(false);
+      return;
+    }
+
+    const anyCourse = finalCourse as any;
+    let rawChapters: any[] =
+      anyCourse.content?.chapters ?? anyCourse.chapters ?? [];
+
+    if (!Array.isArray(rawChapters)) rawChapters = [];
+
+    const normalized: StudentChapter[] = rawChapters.map(
+      (ch: any, index: number) => ({
+        id: ch.id ?? index + 1,
+        title: ch.title ?? `الوحدة ${index + 1}`,
+        description: ch.description ?? "",
+        lessons: Array.isArray(ch.lessons)
+          ? ch.lessons.map((l: any, li: number) => ({
+              id: l.id ?? li + 1,
+              title: l.title ?? `درس ${li + 1}`,
+              type: (l.type as LessonType) ?? ("video" as LessonType),
+              url: l.url,
+              isPaid: !!l.isPaid,
+              attachment: l.attachment,
+            }))
+          : [],
+      })
+    );
+
+    setChapters(normalized);
+    setLoading(false);
+  }, [courseId]);
+
+  const mainVideoUrl = useMemo(() => {
+    if (!course) return undefined;
+    if (course.videoUrl) return course.videoUrl;
+
+    const firstVideo = chapters
+      .flatMap((ch) => ch.lessons)
+      .find((l) => l.type === "video" && l.url);
+
+    return firstVideo?.url;
+  }, [course, chapters]);
+
+  if (loading) {
     return (
-      <div className="py-12">
-        <h1 className="font-headline text-2xl font-bold mb-2">
-          {t.courseNotFound || "لم يتم العثور على هذا الكورس"}
-        </h1>
-        <p className="text-muted-foreground">
-          {t.courseNotFoundDesc || "ربما تم حذفه أو تغيير رابطه."}
-        </p>
-      </div>
+      <p className="text-sm text-muted-foreground">
+        جارٍ تحميل الكورس...
+      </p>
     );
   }
 
-  const enrollmentFromSeed = studentData.enrolledCourses.find(
-    (ec) => ec.id === course.id
-  );
+  if (!course) {
+    notFound();
+  }
 
-  const [isEnrolled, setIsEnrolled] = useState<boolean>(!!enrollmentFromSeed);
-  const [isCompleted, setIsCompleted] = useState<boolean>(
-    enrollmentFromSeed?.status === "completed"
-  );
-  const [progress, setProgress] = useState<number>(
-    enrollmentFromSeed?.progress ?? 0
-  );
-
-  // نقرأ التسجيل من localStorage
-  useEffect(() => {
-    try {
-      const raw =
-        typeof window !== "undefined"
-          ? localStorage.getItem("studentEnrollments")
-          : null;
-
-      if (!raw) return;
-
-      const parsed = JSON.parse(raw) as LocalEnrollment[];
-      const found = parsed.find((e) => e.courseId === course.id);
-      if (found) {
-        setIsEnrolled(true);
-        setProgress(found.progress ?? 0);
-        if (found.status === "completed") {
-          setIsCompleted(true);
-        }
-      }
-    } catch (error) {
-      console.warn("Failed to read studentEnrollments", error);
-    }
-  }, [course.id]);
-
-  const handleRegister = () => {
-    try {
-      const raw =
-        typeof window !== "undefined"
-          ? localStorage.getItem("studentEnrollments")
-          : null;
-      let enrollments: LocalEnrollment[] = raw ? JSON.parse(raw) : [];
-
-      const existing = enrollments.find((e) => e.courseId === course.id);
-      if (!existing) {
-        enrollments.push({
-          courseId: course.id,
-          status: course.isFreeTrial ? "trial" : "active",
-          progress: 0,
-          enrolledAt: new Date().toISOString(),
-        });
-        localStorage.setItem(
-          "studentEnrollments",
-          JSON.stringify(enrollments)
-        );
-      }
-
-      setIsEnrolled(true);
-      setIsCompleted(false);
-      setProgress(0);
-
-      toast({
-        title: t.registeredSuccess,
-        description: `${t.registeredCourse} "${course.title}".`,
-      });
-    } catch (error) {
-      console.warn("Failed to save enrollment", error);
-      toast({
-        title: t.error,
-        description: t.somethingWentWrong,
-        variant: "destructive",
-      });
-    }
-  };
-
-  // محتوى الكورس (فصول + دروس + ملخصات)
-  const content = (course as any).content;
-  const chapters: any[] = content?.chapters || [];
+  const isAr = language === "ar";
 
   return (
     <div className="space-y-8">
-      {/* الهيدر الرئيسي للكورس */}
-      <Card>
-        <CardHeader className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-4">
-            <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl bg-muted text-4xl">
-              {course.image ? (
-                <img
-                  src={course.image.imageUrl}
-                  alt={course.image.description || course.title}
-                  className="h-full w-full object-cover"
-                />
-              ) : (
-                <span>{course.emoji}</span>
-              )}
-            </div>
-            <div>
-              <CardTitle className="font-headline text-2xl">
-                {course.title}
-              </CardTitle>
-              <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                <Badge variant="outline">{course.code}</Badge>
-                <span>• {course.teacher}</span>
-                <span>• {course.specialization}</span>
-              </div>
-            </div>
+      {/* هيدر الكورس + الفيديو الرئيسي */}
+      <div className="grid items-start gap-6 lg:grid-cols-[3fr,2fr]">
+        <div className="space-y-4">
+          <h1 className="font-headline text-3xl font-bold">
+            {course.title}
+          </h1>
+
+          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+            <Badge variant="outline">{course.code}</Badge>
+            {course.specialization && (
+              <Badge variant="secondary">{course.specialization}</Badge>
+            )}
           </div>
 
-          <div className="flex flex-col items-start gap-2 md:items-end">
-            <div className="flex items-center gap-2">
-              <Star className="h-5 w-5 fill-amber-400 text-amber-500" />
-              <span className="font-bold text-amber-500">
-                {course.rating.toFixed(1)}
-              </span>
-              <span className="text-xs text-muted-foreground">
-                ({course.enrolledStudents} {t.student})
-              </span>
-            </div>
-
-            <div>
-              {course.price !== null ? (
-                <p className="text-lg font-bold text-primary">
-                  {course.price} {t.omr}
-                </p>
-              ) : (
-                <Badge variant="secondary">{t.free}</Badge>
-              )}
-            </div>
-          </div>
-        </CardHeader>
-
-        <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
             {course.description}
           </p>
 
-          {isEnrolled && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>{t.learningProgress || "مدى التقدم"}</span>
-                <span>{progress}%</span>
-              </div>
-              <Progress value={progress} />
-            </div>
-          )}
-        </CardContent>
-
-        <CardFooter className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Users className="h-4 w-4" />
-            <span>
-              {course.enrolledStudents} {t.student}
+          <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+            <span className="flex items-center gap-1">
+              <Star className="h-4 w-4 text-amber-400 fill-amber-400" />
+              {course.rating ? course.rating.toFixed(1) : "—"}
+            </span>
+            <span className="flex items-center gap-1">
+              <BookOpen className="h-4 w-4" />
+              {t.teacher}: {course.teacher}
             </span>
           </div>
+        </div>
 
-          {!isEnrolled ? (
-            <Button onClick={handleRegister}>{t.enrollNow}</Button>
-          ) : isCompleted ? (
-            <Badge variant="outline" className="border-green-500 text-green-600">
-              {t.statusCompleted}
-            </Badge>
-          ) : (
-            <Badge variant="outline" className="border-blue-500 text-blue-600">
-              {t.statusActive}
-            </Badge>
-          )}
-        </CardFooter>
-      </Card>
-
-      {/* 👇 محتوى الكورس: فيديوات / شروحات / اختبارات / ملخصات PDF */}
-      {chapters.length > 0 && (
-        <Card>
+        <Card className="overflow-hidden">
           <CardHeader>
-            <CardTitle>{t.courseContent || "محتوى الكورس"}</CardTitle>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <PlayCircle className="h-5 w-5 text-primary" />
+              {t.watchVideo || "مشاهدة فيديو تعريفي"}
+            </CardTitle>
+            <CardDescription>
+              {t.courseContent ||
+                "يمكنك البدء بمشاهدة الفيديو التعريفي إن وجد."}
+            </CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {chapters.map((chap, idx) => (
-              <div
-                key={idx}
-                className="rounded-lg border p-4 space-y-3 bg-card"
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-semibold">
-                    {chap.title || `${t.chapter || "الوحدة"} ${idx + 1}`}
-                  </h3>
-                  <Badge variant="outline">
-                    {(chap.type as string) || (t.chapter || "وحدة")}
-                  </Badge>
-                </div>
-                {chap.description && (
-                  <p className="text-sm text-muted-foreground">
-                    {chap.description}
-                  </p>
-                )}
+          <CardContent>
+            {mainVideoUrl ? (
+              <div className="aspect-video w-full overflow-hidden rounded-md border bg-black">
+                <video
+                  src={mainVideoUrl}
+                  controls
+                  className="h-full w-full object-contain"
+                />
+              </div>
+            ) : (
+              <div className="flex aspect-video w-full items-center justify-center rounded-md border bg-muted text-sm text-muted-foreground">
+                لا يوجد فيديو تعريفي مضاف لهذا الكورس حالياً.
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
-                {/* الدروس (فيديو / مقال / اختبار) */}
-                {Array.isArray(chap.lessons) && chap.lessons.length > 0 && (
-                  <div className="space-y-2">
-                    {chap.lessons.map((lesson: any, i: number) => (
-                      <div
-                        key={i}
-                        className="flex items-center justify-between rounded-md bg-muted/60 px-3 py-2 text-sm"
-                      >
-                        <div className="flex items-center gap-2">
-                          {lesson.type === "quiz" ? (
-                            <HelpCircle className="h-4 w-4 text-amber-500" />
-                          ) : lesson.type === "article" ? (
-                            <FileText className="h-4 w-4 text-blue-500" />
-                          ) : (
-                            <PlayCircle className="h-4 w-4 text-primary" />
-                          )}
-                          <span>{lesson.title || t.lesson || "درس"}</span>
+      {/* محتوى الكورس (الوحدات + الدروس) */}
+      <section className="space-y-4">
+        <h2 className="font-headline text-2xl font-semibold">
+          {t.courseContent || "محتوى الكورس"}
+        </h2>
 
-                        </div>
-                        {lesson.duration && (
-                          <span className="text-xs text-muted-foreground">
-                            {lesson.duration}
-                          </span>
-                        )}
-                      </div>
-                    ))}
+        {chapters.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            لا توجد وحدات/دروس مضافة لهذا الكورس حتى الآن.
+          </p>
+        ) : (
+          <div className="space-y-4">
+            {chapters.map((chapter, index) => (
+              <Card key={chapter.id}>
+                <CardHeader className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold">
+                        {index + 1}
+                      </span>
+                      {chapter.title}
+                    </CardTitle>
+                    {chapter.description && (
+                      <CardDescription className="mt-1 text-xs">
+                        {chapter.description}
+                      </CardDescription>
+                    )}
                   </div>
-                )}
+                  <Badge variant="outline" className="text-[10px]">
+                    {chapter.lessons.length} {t.lessons || "درس"}
+                  </Badge>
+                </CardHeader>
 
-                {/* ملخصات PDF القابلة للتنزيل */}
-                {Array.isArray(chap.pdfSummaries) &&
-                  chap.pdfSummaries.length > 0 && (
-                    <div className="space-y-2 pt-3 mt-2 border-t">
-                      <p className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
-                        <FileText className="h-4 w-4" />
-                        ملخصات PDF للوحدة
-                      </p>
-                      {chap.pdfSummaries.map((pdf: any, j: number) => (
-                        <a
-                          key={j}
-                          href={pdf.url}
-                          download
-                          className="flex items-center justify-between rounded-md border bg-background px-3 py-2 text-sm hover:bg-muted/70"
+                <CardContent className="space-y-3">
+                  {chapter.lessons.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">
+                      لا توجد دروس في هذه الوحدة حالياً.
+                    </p>
+                  ) : (
+                    <div className="space-y-2">
+                      {chapter.lessons.map((lesson) => (
+                        <div
+                          key={lesson.id}
+                          className="flex flex-col gap-2 rounded-md border p-3 text-xs md:flex-row md:items-center md:justify-between"
                         >
-                          <span className="flex items-center gap-2">
-                            <Download className="h-4 w-4" />
-                            {pdf.title ||
-                              `ملخص الوحدة ${idx + 1} - ${j + 1}`}
-                          </span>
-                          {pdf.size && (
-                            <span className="text-xs text-muted-foreground">
-                              {pdf.size}
-                            </span>
-                          )}
-                        </a>
+                          <div className="space-y-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <Badge variant="outline">
+                                {lesson.type === "video"
+                                  ? t.watchVideo || "فيديو"
+                                  : lesson.type === "pdf"
+                                  ? "ملف PDF"
+                                  : lesson.type === "quiz"
+                                  ? t.quizzes || "اختبار"
+                                  : t.activities || "تمرين"}
+                              </Badge>
+                              <span className="font-semibold">
+                                {lesson.title}
+                              </span>
+                              {lesson.isPaid && (
+                                <Badge
+                                  variant="secondary"
+                                  className="bg-amber-100 text-amber-700"
+                                >
+                                  {t.paidContent || "محتوى مدفوع"}
+                                </Badge>
+                              )}
+                            </div>
+
+                            {/* رابط الدرس إن وجد */}
+                            {lesson.url && (
+                              <p className="break-all text-[11px] text-muted-foreground">
+                                {lesson.type === "video"
+                                  ? "رابط الفيديو:"
+                                  : lesson.type === "pdf"
+                                  ? "رابط الملف:"
+                                  : "رابط/ملاحظة:"}{" "}
+                                <a
+                                  href={lesson.url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-primary underline"
+                                >
+                                  {lesson.url}
+                                </a>
+                              </p>
+                            )}
+
+                            {/* مرفق PDF */}
+                            {lesson.attachment && (
+                              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+                                <FileText className="h-3 w-3" />
+                                <span>
+                                  ملخص مرفق: {lesson.attachment.name} (
+                                  {Math.round(lesson.attachment.size / 1024)} KB)
+                                </span>
+                              </div>
+                            )}
+                          </div>
+
+                          {/* أزرار التفاعل مع الدرس */}
+                          <div className="flex flex-wrap gap-2 md:justify-end">
+                            {lesson.type === "video" &&
+                              (lesson.url || mainVideoUrl) && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    // ممكن مستقبلاً تربطة بتغيير الفيديو الرئيسي
+                                    alert(
+                                      "هنا لاحقاً ممكن يتم تشغيل هذا الفيديو في المشغّل العلوي."
+                                    );
+                                  }}
+                                >
+                                  <PlayCircle className="ms-1 h-4 w-4" />
+                                  {t.watchVideo || "مشاهدة الفيديو"}
+                                </Button>
+                              )}
+
+                            {lesson.type === "pdf" &&
+                              lesson.attachment && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    if (!lesson.attachment?.dataUrl) {
+                                      alert(
+                                        "لا يوجد ملف PDF محفوظ محلياً لهذا الدرس."
+                                      );
+                                      return;
+                                    }
+                                    const win = window.open();
+                                    if (win) {
+                                      win.document.write(
+                                        `<iframe src="${lesson.attachment.dataUrl}" style="border:0;width:100%;height:100%"></iframe>`
+                                      );
+                                    }
+                                  }}
+                                >
+                                  <FileText className="ms-1 h-4 w-4" />
+                                  {t.open || "فتح الملخص"}
+                                </Button>
+                              )}
+
+                            {lesson.type === "quiz" && (
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  alert(
+                                    "هنا لاحقاً ممكن نربط اختبار تفاعلي أو AI Quiz. (placeholder)"
+                                  );
+                                }}
+                              >
+                                <ListChecks className="ms-1 h-4 w-4" />
+                                {t.startQuiz || "بدء اختبار AI"}
+                              </Button>
+                            )}
+
+                            {lesson.type === "assignment" && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  alert(
+                                    "مكان رفع الحل أو واجبات الطالب (placeholder)."
+                                  );
+                                }}
+                              >
+                                <FilePenLine className="ms-1 h-4 w-4" />
+                                {t.submitAssignment || "إرسال التمرين"}
+                              </Button>
+                            )}
+
+                            {/* زر اختيار الدرس للمساعد الذكي */}
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => setActiveLessonTitle(lesson.title)}
+                            >
+                              <MessageCircle className="ms-1 h-4 w-4" />
+                              {isAr
+                                ? "اسأل عن هذا الدرس"
+                                : "Ask about this lesson"}
+                            </Button>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}
-              </div>
+                </CardContent>
+              </Card>
             ))}
+          </div>
+        )}
+      </section>
+
+      {/* شريط التقدم (مثال ثابت حالياً) */}
+      <section className="space-y-2">
+        <h2 className="font-headline text-xl font-semibold">
+          {t.yourProgress || "تقدمك في الكورس"}
+        </h2>
+        <Card>
+          <CardContent className="space-y-2 pt-4">
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <span>
+                {t.learningProgress || "نسبة الإنجاز التقديرية"}
+              </span>
+              <span>20%</span>
+            </div>
+            <Progress value={20} />
+            <p className="text-[11px] text-muted-foreground">
+              (هذا مجرد مثال ثابت – لاحقاً ممكن نربطه بالدروس التي تفتحها وتكملها.)
+            </p>
           </CardContent>
         </Card>
-      )}
+      </section>
+
+      {/* وحدة الذكاء التعليمي للكورس */}
+      <section className="space-y-3">
+        <h2 className="font-headline text-xl font-semibold">
+          {isAr ? "الذكاء التعليمي للكورس" : "AI Learning for this course"}
+        </h2>
+        <AiLearningWidget
+          courseTitle={course.title}
+          lessonTitle={activeLessonTitle}
+        />
+      </section>
     </div>
   );
 }

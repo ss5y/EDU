@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useMemo } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -28,11 +28,22 @@ import { useLanguage } from "@/hooks/use-language";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
 import { branches } from "@/lib/placeholder-data";
+import { departments } from "@/lib/departments-data";
 
 export default function SignupPage() {
   const { t } = useLanguage();
   const router = useRouter();
+
   const [role, setRole] = useState<"student" | "teacher">("student");
+  const [selectedDepartment, setSelectedDepartment] = useState<string>("");
+  const [selectedSpecialization, setSelectedSpecialization] = useState<string>("");
+
+  // 🧩 التخصصات المرتبطة بالقسم المحدد
+  const specializations = useMemo(() => {
+    if (!selectedDepartment) return [];
+    const dep = departments.find((d) => d.id === selectedDepartment);
+    return dep ? dep.specializations.map((s) => s.name.ar) : [];
+  }, [selectedDepartment]);
 
   const handleSignup = () => {
     const nameInput = document.getElementById("name") as HTMLInputElement | null;
@@ -41,10 +52,17 @@ export default function SignupPage() {
     const name = nameInput?.value?.trim() || "";
     const email = emailInput?.value?.trim() || "";
 
+    if (!selectedDepartment || !selectedSpecialization) {
+      alert("يرجى اختيار القسم والتخصص قبل التسجيل");
+      return;
+    }
+
     const user = {
       name,
       email,
       role,
+      department: selectedDepartment,
+      specialization: selectedSpecialization,
     };
 
     try {
@@ -138,6 +156,49 @@ export default function SignupPage() {
                         {branch}
                       </SelectItem>
                     ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* اختيار القسم */}
+              <div className="space-y-2">
+                <Label>اختر القسم</Label>
+                <Select onValueChange={setSelectedDepartment}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر القسم" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {departments.map((dep) => (
+                      <SelectItem key={dep.id} value={dep.id}>
+                        {dep.name.ar}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* اختيار التخصص */}
+              <div className="space-y-2">
+                <Label>اختر التخصص</Label>
+                <Select
+                  onValueChange={setSelectedSpecialization}
+                  disabled={!selectedDepartment}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="اختر التخصص" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {specializations.length > 0 ? (
+                      specializations.map((spec) => (
+                        <SelectItem key={spec} value={spec}>
+                          {spec}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <SelectItem value="none" disabled>
+                        اختر القسم أولاً
+                      </SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>

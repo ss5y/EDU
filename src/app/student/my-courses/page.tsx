@@ -18,7 +18,7 @@ import { Star } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLanguage } from "@/hooks/use-language";
 import { courses, studentData } from "@/lib/placeholder-data";
-import type { Course } from "@/lib/types";
+import type { Course, EnrolledCourse as EnrolledCourseType } from "@/lib/types";
 
 type Enrollment = {
   courseId: number;
@@ -27,10 +27,7 @@ type Enrollment = {
   enrolledAt?: string;
 };
 
-type EnrolledCourse = Course & {
-  status: "active" | "trial" | "completed";
-  progress: number;
-};
+type EnrolledCourse = EnrolledCourseType; // بس عشان الاسم أقصر هنا
 
 function getStatusText(
   status: "active" | "trial" | "completed",
@@ -54,51 +51,89 @@ export default function StudentMyCoursesPage() {
 
   const [localEnrollments, setLocalEnrollments] = useState<Enrollment[]>([]);
 
-  // نقرأ التسجيلات المحفوظة في المتصفح
+  // 📌 نقرأ التسجيلات المحفوظة في المتصفح
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     try {
-      const raw =
-        typeof window !== "undefined"
-          ? localStorage.getItem("studentEnrollments")
-          : null;
-      if (raw) {
-        const parsed = JSON.parse(raw) as Enrollment[];
-        setLocalEnrollments(parsed);
+      const raw = localStorage.getItem("studentEnrollments");
+      if (!raw) {
+        setLocalEnrollments([]);
+        return;
+      }
+
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) {
+        setLocalEnrollments(parsed as Enrollment[]);
+      } else {
+        setLocalEnrollments([]);
       }
     } catch (error) {
       console.warn("Failed to read studentEnrollments", error);
+      setLocalEnrollments([]);
     }
   }, []);
 
-  // ندمج بيانات الطالب الأساسية مع اللي انحفظت في localStorage
+  // 📌 ندمج بيانات الطالب الأساسية مع اللي انحفظت في localStorage
   const allEnrolledCourses: EnrolledCourse[] = useMemo(() => {
-    const base: EnrolledCourse[] = (studentData.enrolledCourses as any).map(
-      (c: any) => ({
-        ...(c as Course),
-        status: (c.status || "active") as "active" | "trial" | "completed",
-        progress: c.progress ?? 0,
-      })
-    );
+    // 1) من studentData.enrolledCourses (البيانات الأساسية)
+    const baseEnrolled: EnrolledCourse[] = Array.isArray(
+      studentData.enrolledCourses
+    )
+      ? (studentData.enrolledCourses as any[]).map((c: any) => {
+          const baseCoursePart = c as Course;
 
-    const extra: EnrolledCourse[] = localEnrollments
-      .filter((e) => !base.some((c) => c.id === e.courseId))
-      .map((e) => {
-       const course = courses.find((c) => c.id === e.courseId);
-if (!course) return null;
+          const status =
+            (c.status as EnrolledCourse["status"]) ?? ("active" as const);
 
-return {
-  ...course,
-  status: (e.status || "active") as "active" | "trial" | "completed",
-  progress: e.progress ?? 0,
-} as unknown as EnrolledCourse;
+          const progress =
+            typeof c.progress === "number" && !Number.isNaN(c.progress)
+              ? c.progress
+              : 0;
 
-      })
-      .filter(Boolean) as EnrolledCourse[];
+          return {
+            ...baseCoursePart,
+            status,
+            progress,
+          } as EnrolledCourse;
+        })
+      : [];
 
-    return [...base, ...extra];
+    // IDs عشان ما نكرر نفس الكورس لو موجود بالأساس
+    const baseIds = new Set(baseEnrolled.map((c) => c.id));
+
+    // 2) إضافات من localStorage (studentEnrollments)
+    const extraEnrolled: EnrolledCourse[] = Array.isArray(localEnrollments)
+      ? localEnrollments
+          .filter((e) => !baseIds.has(e.courseId))
+          .map((e) => {
+            const course = courses.find((c) => c.id === e.courseId);
+            if (!course) return null;
+
+            const status =
+              (e.status as EnrolledCourse["status"]) ?? ("active" as const);
+
+            const progress =
+              typeof e.progress === "number" && !Number.isNaN(e.progress)
+                ? e.progress
+                : 0;
+
+            return {
+              ...course,
+              status,
+              progress,
+            } as EnrolledCourse;
+          })
+          .filter(
+            (c): c is EnrolledCourse =>
+              !!c && !!c.title && !!c.code
+          )
+      : [];
+
+    return [...baseEnrolled, ...extraEnrolled];
   }, [localEnrollments]);
 
-  // ❗ هنا نزيل أي كورس ناقص البيانات (مثل الكرت الفاضي)
+  // ⚠️ نزيل أي كورس ناقص بيانات عشان ما يطلع كرت فاضي
   const visibleCourses = allEnrolledCourses.filter(
     (course) => course && course.title && course.code
   );
@@ -144,6 +179,7 @@ return {
                     )}
                   </div>
                 </CardHeader>
+
                 <CardContent className="p-4 flex-1">
                   <div className="flex justify-between items-start mb-2">
                     <Badge
@@ -155,10 +191,12 @@ return {
                     </Badge>
                     <Badge variant="outline">{course.code}</Badge>
                   </div>
+
                   <h3 className="font-semibold text-lg">{course.title}</h3>
                   <p className="text-sm text-muted-foreground">
                     {course.teacher}
                   </p>
+
                   <div className="mt-4">
                     <Progress value={course.progress} />
                     <p className="mt-1 text-right text-xs text-muted-foreground">
