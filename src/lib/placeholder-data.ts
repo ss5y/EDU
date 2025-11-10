@@ -1,4 +1,5 @@
 
+import type { EnrolledCourse } from "./types"; // أو "@/lib/types" حسب المسار عندك
 import type { ImagePlaceholder } from './placeholder-images';
 import { PlaceHolderImages } from './placeholder-images';
 import { Course, Teacher, Student } from './types';
@@ -602,12 +603,27 @@ export const studentData: Student = {
     totalCourses: 5,
   },
   enrolledCourses: [
-    { ...courses[0], status: 'active', progress: 75 },
-    { ...courses[2], status: 'trial', progress: 20 },
-    { ...courses[4], status: 'completed', progress: 100 },
-    { ...courses[3], status: 'active', progress: 40 },
-    { ...courses[5], status: 'trial', progress: 10 },
-  ],
+    {
+      ...(courses[0] as unknown as EnrolledCourse),
+      status: "active",
+      progress: 75,
+    },
+    {
+      ...(courses[2] as unknown as EnrolledCourse),
+      status: "trial",
+      progress: 20,
+    },
+    {
+      ...(courses[4] as unknown as EnrolledCourse),
+      status: "completed",
+      progress: 100,
+    },
+    {
+      ...(courses[3] as unknown as EnrolledCourse),
+      status: "active",
+      progress: 40,
+    },
+  ] as EnrolledCourse[],
 };
 
 const teacher1Courses = courses.filter(c => c.teacherId === 1);
@@ -627,7 +643,7 @@ export const teacherData: Teacher = {
   totalCourses: teacher1Courses.length,
   totalStudents: teacher1TotalStudents,
   averageRating: teacher1TotalRatingsCount > 0 ? (teacher1TotalRatingsSum / teacher1TotalRatingsCount) : 0,
-  courses: teacher1Courses,
+  courses: teacher1Courses as unknown as Course[],
 };
 
 const allTeachersData = [
@@ -678,7 +694,7 @@ const allTeachersData = [
   }
 ];
 
-export const allTeachers: Teacher[] = allTeachersData.map(teacher => {
+export const allTeachers = allTeachersData as unknown as Teacher[];allTeachersData.map(teacher => {
     const teacherCourses = courses.filter(c => c.teacherId === teacher.id);
     const totalStudents = teacherCourses.reduce((sum, course) => sum + course.enrolledStudents, 0);
     const allReviews = teacherCourses.flatMap(c => c.reviews);

@@ -1,41 +1,81 @@
-
 "use client";
-import { createContext, useState, useMemo, ReactNode, useEffect } from 'react';
-import { translations, Translation, Language } from '@/lib/translations';
-import { usePathname } from 'next/navigation';
 
-interface LanguageContextType {
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+  type ReactNode,
+  type Dispatch,
+  type SetStateAction,
+} from "react";
+import { usePathname } from "next/navigation";
+import { translations, type Translation, type Language } from "@/lib/translations";
+
+export type LanguageContextType = {
   language: Language;
-  setLanguage: (lang: Language) => void;
+  setLanguage: Dispatch<SetStateAction<Language>>;
   t: Translation;
-  dir: 'ltr' | 'rtl';
-}
+  dir: "ltr" | "rtl";
+};
 
 export const LanguageContext = createContext<LanguageContextType | undefined>(undefined);
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const [language, setLanguage] = useState<Language>('ar');
+type LanguageProviderProps = {
+  children: ReactNode;
+};
+
+export function LanguageProvider({ children }: LanguageProviderProps) {
   const pathname = usePathname();
+  const [language, setLanguage] = useState<Language>("ar");
 
+  // نحدد اللغة أول مرة من localStorage أو من الـ URL
   useEffect(() => {
-    const root = document.documentElement;
-    root.lang = language;
-    root.dir = language === 'ar' ? 'rtl' : 'ltr';
-    if (language === 'ar' && !pathname.startsWith('/ar')) {
-        // an example of how to handle routing, not implemented for this prototype
+    if (typeof window === "undefined") return;
+
+    const stored = window.localStorage.getItem("edu-smart-language") as Language | null;
+    let initial: Language = stored || "ar";
+
+    if (!stored && pathname) {
+      if (pathname.startsWith("/en")) initial = "en";
+      if (pathname.startsWith("/ar")) initial = "ar";
     }
-  }, [language, pathname]);
 
-  const value = useMemo(() => ({
-    language,
-    setLanguage,
-    t: translations[language],
-    dir: language === 'ar' ? 'rtl' : 'ltr',
-  }), [language]);
+    setLanguage(initial);
+  }, [pathname]);
 
-  return (
-    <LanguageContext.Provider value={value}>
-      {children}
-    </LanguageContext.Provider>
+  // نعدّل dir و lang في <html> ونخزن اللغة
+  useEffect(() => {
+    const dir: "ltr" | "rtl" = language === "ar" ? "rtl" : "ltr";
+
+    if (typeof document !== "undefined") {
+      document.documentElement.lang = language;
+      document.documentElement.dir = dir;
+    }
+
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem("edu-smart-language", language);
+    }
+  }, [language]);
+
+  const value: LanguageContextType = useMemo(
+    () => ({
+      language,
+      setLanguage,
+      t: translations[language],
+      dir: language === "ar" ? "rtl" : "ltr",
+    }),
+    [language],
   );
+
+  return <LanguageContext.Provider value={value}>{children}</LanguageContext.Provider>;
+}
+
+export function useLanguage(): LanguageContextType {
+  const ctx = useContext(LanguageContext);
+  if (!ctx) {
+    throw new Error("useLanguage must be used within a LanguageProvider");
+  }
+  return ctx;
 }
