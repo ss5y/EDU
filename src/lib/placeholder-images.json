@@ -1,0 +1,58 @@
+{
+  "placeholderImages": [
+    {
+      "id": "hero",
+      "description": "An illustration of a vibrant and modern university campus.",
+      "imageUrl": "https://images.unsplash.com/photo-1691388203135-76f78e17a25d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw5fHxjYXJ0b29uJTIwdW5pdmVyc2l0eXxlbnwwfHx8fDE3NTk0OTIzNTd8MA&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cartoon university"
+    },
+    {
+      "id": "course-1",
+      "description": "Illustration for a web development course.",
+      "imageUrl": "https://images.unsplash.com/photo-1555066931-4365d1469c08?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzNzk5MDR8MHwxfHNlYXJjaHwxfHx3ZWIlMjBkZXZlbG9wbWVudCUyMGlsbHVzdHJhdGlvbnxlbnwwfDB8fHwxNzE3MjI2Mjg3fDA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "web development"
+    },
+    {
+      "id": "course-2",
+      "description": "Illustration for a data science course.",
+      "imageUrl": "https://images.unsplash.com/photo-1526374965328-5f61d4dc16c6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzNzk5MDR8MHwxfHNlYXJjaHwxfHxkYXRhJTIwc2NpZW5jZSUyMGlsbHVzdHJhdGlvbnxlbnwwfDB8fHwxNzE3MjI2MzE5fDA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "data science"
+    },
+    {
+      "id": "course-3",
+      "description": "Illustration for a business management course.",
+      "imageUrl": "https://images.unsplash.com/photo-1556761175-b413da4baf72?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzNzk5MDR8MHwxfHNlYXJjaHwxfHxidXNpbmVzcyUyMG1hbmFnZW1lbnQlMjBpbGx1c3RyYXRpb258ZW58MHwwfHx8MTcxNzIyNjM0NHww&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "business management"
+    },
+    {
+      "id": "course-4",
+      "description": "Illustration for a graphic design course.",
+      "imageUrl": "https://images.unsplash.com/photo-1626785774573-4b799315345d?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzNzk5MDR8MHwxfHNlYXJjaHwxfHxncmFwaGljJTIwZGVzaWduJTIwaWxsdXN0cmF0aW9ufGVufDB8MHx8fDE3MTcyMjYzNjl8MA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "graphic design"
+    },
+    {
+      "id": "course-5",
+      "description": "Illustration for an electrical engineering course.",
+      "imageUrl": "https://images.unsplash.com/photo-1581092921532-a4f03a5d243a?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzNzk5MDR8MHwxfHNlYXJjaHwxfHxlbmdpbmVlcmluZyUyMGlsbHVzdHJhdGlvbnxlbnwwfDB8fHwxNzE3MjI2Mzk1fDA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "engineering illustration"
+    },
+    {
+      "id": "course-6",
+      "description": "Illustration for a literature course.",
+      "imageUrl": "https://images.unsplash.com/photo-1456513080510-7bf3a84b82f8?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3wzNzk5MDR8MHwxfHNlYXJjaHwxfHxsaXRlcmF0dXJlJTIwaWxsdXN0cmF0aW9ufGVufDB8MHx8fDE3MTcyMjY0MTN8MA&ixlib=rb-4.0.3&q=80&w=1080",
+      "imageHint": "literature illustration"
+    },
+    {
+      "id": "student-avatar",
+      "description": "Cartoon avatar for a student.",
+      "imageUrl": "https://images.unsplash.com/photo-1631913290783-490324506193?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHwyfHxjYXJ0b29uJTIwYXZhdGFyfGVufDB8fHx8MTc1OTQ0NTA1NHww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cartoon avatar"
+    },
+    {
+      "id": "teacher-avatar",
+      "description": "Cartoon avatar for a teacher.",
+      "imageUrl": "https://images.unsplash.com/photo-1652795385761-7ac287d0cd03?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3NDE5ODJ8MHwxfHNlYXJjaHw3fHxjYXJ0b29uJTIwcHJvZmVzc29yfGVufDB8fHx8MTc1OTQ5MjM1Nnww&ixlib=rb-4.1.0&q=80&w=1080",
+      "imageHint": "cartoon professor"
+    }
+  ]
+}
