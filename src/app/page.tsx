@@ -1,14 +1,27 @@
 'use client';
+
+import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
+
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { CheckCircle2, Star, Check } from 'lucide-react';
+
 import { Header } from '@/components/header';
 import { Footer } from '@/components/footer';
 import { courses } from '@/lib/placeholder-data';
-import Link from 'next/link';
 import { useLanguage } from '@/hooks/use-language';
 import { CourseCard } from '@/components/course-card';
+import { FakePayment, type PlanId } from '@/components/FakePayment';
+
+interface Plan {
+  id: PlanId;
+  name: string;
+  price: number;
+  features: string[];
+  isPopular: boolean;
+}
 
 export default function Home() {
   const { t } = useLanguage();
@@ -52,16 +65,18 @@ export default function Home() {
     { title: t.step3Title, description: t.step3Desc, icon: '🚀' },
   ];
 
-  const plans = [
+  const plans: Plan[] = [
     {
+      id: 'monthly',
       name: 'باقة شهر واحد',
-      price: '10',
+      price: 10,
       features: ['اختر 3 كورسات', 'الكورس الإضافي = 1.499 ريال', 'دعم عبر البريد الإلكتروني'],
       isPopular: false,
     },
     {
+      id: 'quarter',
       name: 'باقة 3 أشهر',
-      price: '19.99',
+      price: 19.99,
       features: [
         'اختر 5 كورسات',
         'الكورس الإضافي = 1.199 ريال',
@@ -71,14 +86,18 @@ export default function Home() {
       isPopular: true,
     },
     {
+      id: 'annual',
       name: 'باقة سنوية',
-      price: '40',
+      price: 40,
       features: ['وصول غير محدود للكورسات', 'مساعد AI شخصي', 'جلسات شهرية مع المعلمين', 'دعم ذو أولوية'],
       isPopular: false,
     },
   ];
 
-  // ✅ نأخذ أول 4 كورسات ونعاملها كـ any عشان نرتاح من TypeScript هنا
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [isPaymentOpen, setIsPaymentOpen] = useState(false);
+
+  // نأخذ أول 4 كورسات
   const latestCourses = courses.slice(0, 4) as any[];
 
   return (
@@ -86,11 +105,10 @@ export default function Home() {
       <Header />
 
       <main className="flex-1">
-
-        {/* ====== صوره ====== */}
+        {/* ====== صورة أعلى الصفحة ====== */}
         <div className="relative w-full h-[500px]">
           <Image
-            src="/edu.png" 
+            src="/edu.png"
             alt="University Lecture Hall"
             fill
             style={{ objectFit: 'cover' }}
@@ -193,10 +211,11 @@ export default function Home() {
                 {t.plansTitle}
               </h2>
             </div>
+
             <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
               {plans.map((plan) => (
                 <Card
-                  key={plan.name}
+                  key={plan.id}
                   className={`flex flex-col relative overflow-hidden ${
                     plan.isPopular ? 'border-primary border-2 shadow-lg' : 'border'
                   }`}
@@ -210,13 +229,15 @@ export default function Home() {
                     <CardTitle className="font-headline text-2xl">{plan.name}</CardTitle>
                     <p className="text-4xl font-bold">
                       {plan.price}{' '}
-                      <span className="text-lg font-normal text-muted-foreground">{t.planPriceSuffix}</span>
+                      <span className="text-lg font-normal text-muted-foreground">
+                        {t.planPriceSuffix}
+                      </span>
                     </p>
                   </CardHeader>
                   <CardContent className="flex-1 flex flex-col">
                     <ul className="space-y-3 text-center text-foreground/80">
                       {plan.features.map((feat) => (
-                        <li key={feat} className="flex items-center gap-2">
+                        <li key={feat} className="flex items-center justify-center gap-2">
                           <Check className="w-5 h-5 text-green-500" />
                           <span>{feat}</span>
                         </li>
@@ -224,13 +245,48 @@ export default function Home() {
                     </ul>
                   </CardContent>
                   <CardFooter className="flex flex-col gap-2">
-                    {plan.isPopular && <Button className="w-full" variant="outline">{t.freeTrial}</Button>}
-                    <Button className="w-full">{t.subscribeNow}</Button>
+                    {plan.isPopular && (
+                      <Button className="w-full" variant="outline">
+                        {t.freeTrial}
+                      </Button>
+                    )}
+                    <Button
+                      className="w-full"
+                      onClick={() => {
+                        setSelectedPlan(plan);
+                        setIsPaymentOpen(true);
+                      }}
+                    >
+                      {t.subscribeNow}
+                    </Button>
                   </CardFooter>
                 </Card>
               ))}
             </div>
+
+            <div className="mt-10 max-w-xl mx-auto">
+              {selectedPlan ? (
+                <h3 className="mb-3 text-center text-lg font-semibold text-foreground">
+                  تم اختيار:{' '}
+                  <span className="text-primary">{selectedPlan.name}</span>
+                </h3>
+              ) : (
+                <p className="text-center text-sm text-muted-foreground">
+                  اختر إحدى الباقات أعلاه لفتح بوابة الدفع التجريبية، وبعد إتمام الدفع سيتم تحويلك إلى صفحة الكورسات.
+                </p>
+              )}
+            </div>
           </div>
+
+          {/* مودال بوابة الدفع الوهمية */}
+          {selectedPlan && (
+            <FakePayment
+              planId={selectedPlan.id}
+              price={selectedPlan.price}
+              open={isPaymentOpen}
+              onOpenChange={setIsPaymentOpen}
+            />
+          )}
         </section>
 
         {/* ====== دعوة للتسجيل ====== */}

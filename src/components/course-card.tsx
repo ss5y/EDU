@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Star, Users } from "lucide-react";
+import { getCourseImageSrc } from "@/lib/course-images";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,6 +26,8 @@ type Enrollment = {
 export function CourseCard({ course }: CourseCardProps) {
   const { toast } = useToast();
   const { t } = useLanguage();
+
+  const imageSrc = getCourseImageSrc(course);
 
   const handleRegister = () => {
     try {
@@ -67,20 +70,16 @@ export function CourseCard({ course }: CourseCardProps) {
       <div className="flex-1 flex flex-col">
         <Link href={`/student/course/${course.id}`} className="block">
           <CardHeader className="p-0">
-            <div className="relative aspect-video bg-muted flex items-center justify-center">
-              {course.image?.imageUrl ? (
-                <Image
-                  src={course.image.imageUrl}
-                  alt={course.image.description || course.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 33vw"
-                  className="object-cover"
-                />
-              ) : (
-                <span className="text-6xl">{course.emoji}</span>
-              )}
-            </div>
-          </CardHeader>
+            <div className="relative aspect-video bg-muted rounded-t-lg overflow-hidden">
+    <Image
+      src={imageSrc}
+      alt={course.title}
+      fill
+      sizes="(max-width: 768px) 100vw, 25vw"
+      className="object-cover"
+    />
+  </div>
+</CardHeader>
         </Link>
 
         <CardContent className="p-4 flex-1">

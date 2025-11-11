@@ -573,8 +573,8 @@ export default function CourseContentPage({ params }: PageProps) {
                 ) : (
                   <div className="space-y-3">
                     {chapter.lessons.map((lesson) => (
-                      <div
-                        key={lesson.id}
+                  <div
+                     key={`${chapter.id}-${lesson.id}`}
                         className="space-y-2 rounded-md border p-3 text-xs"
                       >
                         <div className="flex items-center justify-between gap-2">

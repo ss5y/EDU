@@ -38,7 +38,7 @@
     --chart-5: 27 87% 67%;
     --radius: 0.5rem;
   }
- 
+
   .dark {
     --background: 222 47% 11%;
     --foreground: 210 40% 98%;
@@ -81,5 +81,193 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+/* =========================
+   صفحة ترقية الباقة (الاشتراكات)
+   ========================= */
+
+@layer components {
+  .pricing-page {
+    min-height: 100vh;
+    background: #020617; /* خلفية داكنة مثل الصورة */
+    color: #e5e7eb;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding: 4rem 1.5rem;
+    direction: rtl;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI',
+      sans-serif;
+  }
+
+  .pricing-container {
+    width: 100%;
+    max-width: 1100px;
+  }
+
+  .pricing-header {
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 2.5rem;
+  }
+
+  .pricing-header h1 {
+    font-size: 1.9rem;
+    font-weight: 700;
+    color: #f9fafb;
+  }
+
+  .plans-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1.5rem;
+  }
+
+  .plan-card {
+    position: relative;
+    background: #020617;
+    border-radius: 1.25rem;
+    padding: 2.1rem 1.9rem 2rem;
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    box-shadow: 0 18px 45px rgba(15, 23, 42, 0.85);
+    display: flex;
+    flex-direction: column;
+  }
+
+  .plan-card--featured {
+    background: radial-gradient(circle at top, #1f2937, #020617);
+    border-color: #22c55e;
+    transform: translateY(-8px);
+  }
+
+  .best-value-badge {
+    position: absolute;
+    top: 0.9rem;
+    left: 1.1rem;
+    background: #facc15;
+    color: #0f172a;
+    padding: 0.25rem 0.8rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    display: inline-flex;
+    gap: 0.35rem;
+    align-items: center;
+  }
+
+  .plan-title {
+    font-size: 1.3rem;
+    font-weight: 700;
+    margin-bottom: 1.4rem;
+    color: #f9fafb;
+  }
+
+  .plan-price-wrap {
+    display: flex;
+    align-items: flex-end;
+    gap: 0.4rem;
+    margin-bottom: 0.4rem;
+  }
+
+  .plan-price {
+    font-size: 2.4rem;
+    font-weight: 800;
+    line-height: 1;
+    color: #f9fafb;
+  }
+
+  .plan-per {
+    font-size: 0.95rem;
+    color: #9ca3af;
+  }
+
+  .plan-features {
+    list-style: none;
+    margin: 1.2rem 0 1.8rem;
+    padding: 0;
+  }
+
+  .plan-feature {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.45rem;
+    font-size: 0.95rem;
+    color: #d1d5db;
+    margin-bottom: 0.4rem;
+  }
+
+  .plan-check {
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: #22c55e;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    color: #022c22;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .plan-btn {
+    margin-top: auto;
+    width: 100%;
+    padding: 0.65rem 1rem;
+    border-radius: 999px;
+    border: none;
+    outline: none;
+    background: #f9fafb;
+    color: #020617;
+    font-weight: 600;
+    font-size: 0.95rem;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease,
+      box-shadow 0.1s ease;
+  }
+
+  .plan-card--featured .plan-btn {
+    background: #22c55e;
+    color: #022c22;
+  }
+
+  .plan-btn:hover:not(.plan-btn--disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 18px rgba(15, 23, 42, 0.7);
+  }
+
+  .plan-btn--disabled {
+    background: #4b5563;
+    color: #d1d5db;
+    cursor: default;
+    box-shadow: none;
+  }
+
+  .payment-section {
+    margin-top: 2.5rem;
+  }
+
+  .payment-title {
+    font-size: 1.3rem;
+    font-weight: 600;
+    margin-bottom: 1rem;
+    color: #f9fafb;
+  }
+
+  .payment-hint {
+    margin-top: 0.5rem;
+    font-size: 0.95rem;
+    color: #9ca3af;
+  }
+
+  @media (max-width: 900px) {
+    .plans-grid {
+      grid-template-columns: 1fr;
+    }
+    .plan-card--featured {
+      transform: none;
+    }
   }
 }
