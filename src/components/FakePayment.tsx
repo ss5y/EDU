@@ -1,28 +1,27 @@
-"use client";
+'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 
-import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+} from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { CheckCircle2 } from 'lucide-react';
 
-export type PlanId = "monthly" | "quarter" | "annual";
+export type PlanId = 'monthly' | 'quarter' | 'annual';
 
 export interface FakePaymentProps {
   planId: PlanId;
   price: number;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess?: () => void;
 }
 
 export function FakePayment({
@@ -30,112 +29,97 @@ export function FakePayment({
   price,
   open,
   onOpenChange,
-  onSuccess,
 }: FakePaymentProps) {
   const router = useRouter();
 
-  const [cardName, setCardName] = useState("");
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvc, setCvc] = useState("");
-  const [brand, setBrand] = useState<"visa" | "mastercard">("visa");
+  const [cardName, setCardName] = useState('');
+  const [cardNumber, setCardNumber] = useState('');
+  const [expiry, setExpiry] = useState('');
+  const [cvv, setCvv] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handlePay = () => {
-    if (!cardName || !cardNumber || !expiry || !cvc) {
-      alert("يرجى تعبئة جميع بيانات البطاقة (أي بيانات تجريبية مقبولة).");
-      return;
-    }
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
 
     setIsSubmitting(true);
 
-    const subscription = {
-      planId,
-      price,
-      brand,
-      activatedAt: new Date().toISOString(),
-      status: "active",
-    };
-
-    try {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("edu_subscription", JSON.stringify(subscription));
-      }
-    } catch (err) {
-      console.warn("Failed to save subscription", err);
-    }
-
     setTimeout(() => {
       setIsSubmitting(false);
+
+      // نحفظ الاشتراك في localStorage (صوري فقط)
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(
+          'edu_subscription',
+          JSON.stringify({
+            planId,
+            price,
+            createdAt: new Date().toISOString(),
+          })
+        );
+      }
+
       onOpenChange(false);
 
-      if (onSuccess) {
-        onSuccess();
-      } else {
-        // بعد الدفع ينتقل لاختيار الكورسات
-        router.push("/student/select-courses");
-      }
-    }, 600);
+      // 🔁 هنا كان التحويل لـ /student/select-courses (اللي يعطيك 404)
+      // نوديك الآن لصفحة تصفّح الكورسات الموجودة فعلاً
+      router.push('/student/browse-courses');
+    }, 1000);
   };
+
+  const planLabel =
+    planId === 'monthly'
+      ? 'باقة شهر واحد'
+      : planId === 'quarter'
+      ? 'باقة 3 أشهر'
+      : 'باقة سنوية';
+
+  const maxCourses =
+    planId === 'monthly' ? 3 : planId === 'quarter' ? 5 : 'غير محدود';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader className="space-y-1">
-          <DialogTitle className="text-xl font-semibold">
-            إتمام الدفع لباقتك
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold text-center">
+            بوابة الدفع التجريبية
           </DialogTitle>
-          <DialogDescription className="text-sm">
-            هذا نموذج دفع تجريبي، يمكنك إدخال أي بيانات (لا يتم خصم أي مبلغ
-            حقيقي).
+          <DialogDescription className="text-center text-sm text-muted-foreground">
+            هذه بوابة دفع وهمية لأغراض التجربة فقط، ولا يتم فيها أي دفع حقيقي.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-2">
-          <div className="flex items-center justify-between rounded-lg border bg-muted px-3 py-2 text-sm">
-            <span>الخطة المختارة</span>
-            <span className="font-semibold">
-              {planId === "monthly"
-                ? "باقة شهر واحد"
-                : planId === "quarter"
-                ? "باقة 3 أشهر"
-                : "باقة سنوية"}{" "}
-              — {price} ر.ع
-            </span>
-          </div>
+        {/* ملخص الباقة */}
+        <div className="rounded-lg border bg-muted/40 p-4 mb-4 space-y-1 text-sm">
+          <p>
+            <span className="font-semibold">الباقة المختارة:</span> {planLabel}
+          </p>
+          <p>
+            <span className="font-semibold">السعر:</span> {price} ريال / شهر
+          </p>
+          <p>
+            <span className="font-semibold">الحد الأقصى للكورسات:</span>{' '}
+            {maxCourses} في هذه الباقة.
+          </p>
+        </div>
 
-          <div className="flex gap-2 text-xs">
-            <button
-              type="button"
-              onClick={() => setBrand("visa")}
-              className={`flex-1 rounded-md border px-3 py-2 text-center ${
-                brand === "visa"
-                  ? "border-primary bg-primary/5"
-                  : "border-border"
-              }`}
-            >
-              Visa
-            </button>
-            <button
-              type="button"
-              onClick={() => setBrand("mastercard")}
-              className={`flex-1 rounded-md border px-3 py-2 text-center ${
-                brand === "mastercard"
-                  ? "border-primary bg-primary/5"
-                  : "border-border"
-              }`}
-            >
-              MasterCard
-            </button>
+        {/* بيانات البطاقة */}
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="flex items-center justify-between rounded-lg border px-4 py-2 text-xs text-muted-foreground mb-2">
+            <span>طرق الدفع المدعومة (تجريبياً):</span>
+            <div className="flex items-center gap-2 text-base">
+              <span className="font-semibold">VISA</span>
+              <span className="font-semibold">MasterCard</span>
+            </div>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="cardName">اسم صاحب البطاقة</Label>
             <Input
               id="cardName"
-              placeholder="مثال: Ahmed Ali"
+              placeholder="مثال: أحمد محمد"
               value={cardName}
               onChange={(e) => setCardName(e.target.value)}
+              required
             />
           </div>
 
@@ -143,13 +127,14 @@ export function FakePayment({
             <Label htmlFor="cardNumber">رقم البطاقة</Label>
             <Input
               id="cardNumber"
-              placeholder="0000 0000 0000 0000"
+              placeholder="1234 5678 9012 3456"
               value={cardNumber}
               onChange={(e) => setCardNumber(e.target.value)}
+              required
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="expiry">تاريخ الانتهاء</Label>
               <Input
@@ -157,33 +142,34 @@ export function FakePayment({
                 placeholder="MM/YY"
                 value={expiry}
                 onChange={(e) => setExpiry(e.target.value)}
+                required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="cvc">CVC</Label>
+              <Label htmlFor="cvv">CVV</Label>
               <Input
-                id="cvc"
+                id="cvv"
                 placeholder="123"
-                value={cvc}
-                onChange={(e) => setCvc(e.target.value)}
+                value={cvv}
+                onChange={(e) => setCvv(e.target.value)}
+                required
               />
             </div>
           </div>
-        </div>
 
-        <DialogFooter className="flex flex-col gap-2 sm:flex-row sm:justify-between">
           <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
+            type="submit"
+            className="mt-2 w-full"
             disabled={isSubmitting}
           >
-            إلغاء
+            {isSubmitting ? 'جارٍ معالجة الدفع...' : 'إتمام الدفع'}
           </Button>
-          <Button type="button" onClick={handlePay} disabled={isSubmitting}>
-            {isSubmitting ? "جارٍ الإتمام..." : "إتمام الدفع والدخول للكورسات"}
-          </Button>
-        </DialogFooter>
+
+          <p className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
+            <CheckCircle2 className="h-4 w-4 text-green-500" />
+            يمكنك إدخال أي بيانات هنا، فالدفع تجريبي ولا يتم خصم أي مبلغ.
+          </p>
+        </form>
       </DialogContent>
     </Dialog>
   );
